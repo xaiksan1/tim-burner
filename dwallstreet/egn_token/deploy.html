@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Deploy EGN — Alexandria</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: monospace;
+        background: #0a0a0a;
+        color: #00ff88;
+        max-width: 680px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #fff;
+        border-bottom: 1px solid #222;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .card {
+        background: #111;
+        border: 1px solid #222;
+        border-radius: 8px;
+        padding: 18px;
+        margin: 14px 0;
+      }
+      .lbl {
+        color: #555;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .val {
+        color: #00ff88;
+        font-size: 13px;
+        margin: 4px 0 12px;
+        word-break: break-all;
+      }
+      btn,
+      button {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        margin: 8px 0;
+        font-size: 15px;
+        font-family: monospace;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #connectBtn {
+        background: #f6851b;
+        color: #fff;
+      }
+      #deployBtn {
+        background: #00ff88;
+        color: #000;
+      }
+      #deployBtn:disabled {
+        background: #222;
+        color: #444;
+        cursor: not-allowed;
+      }
+      .ok {
+        background: #001a0d;
+        border: 1px solid #00ff88;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+      }
+      .err {
+        background: #1a000d;
+        border: 1px solid #ff0055;
+        color: #ff0055;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+      }
+      .inf {
+        background: #001020;
+        border: 1px solid #0088ff;
+        color: #0088ff;
+        padding: 12px;
+        border-radius: 6px;
+        margin: 12px 0;
+      }
+      #result {
+        display: none;
+      }
+      code {
+        color: #ffaa00;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>⚡ Deploy EGN Token — Ethereum Mainnet</h1>
+    <p style="color: #555">
+      Energon · 1 EGN = 1 kWh · Alexandria Phase 3 · ERC-20 + EIP-2612
+    </p>
+
+    <div class="card">
+      <div class="lbl">Wallet</div>
+      <div class="val" id="wallet">—</div>
+      <div class="lbl">Solde ETH</div>
+      <div class="val" id="balance">—</div>
+      <div class="lbl">Réseau</div>
+      <div class="val" id="network">—</div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">Contrat</div>
+      <div class="val">EGN — Energon Token</div>
+      <div class="lbl">Bytecode</div>
+      <div class="val">solc 0.8.20 · 4422 bytes · optimized 200</div>
+      <div class="lbl">Gas estimé</div>
+      <div class="val" id="gasEst">Connecte MetaMask pour estimer…</div>
+    </div>
+
+    <button id="connectBtn" onclick="connect()">🦊 Connecter MetaMask</button>
+    <button id="deployBtn" onclick="deploy()" disabled>
+      ⚡ Déployer EGN sur Ethereum Mainnet
+    </button>
+    <div id="msg"></div>
+
+    <div class="card" id="result">
+      <div class="lbl">✅ Contrat déployé à</div>
+      <div class="val" id="caddr">—</div>
+      <div class="lbl">Tx hash</div>
+      <div class="val" id="txh">—</div>
+      <div class="lbl">Etherscan</div>
+      <div class="val">
+        <a id="escan" href="#" target="_blank" style="color: #0088ff">—</a>
+      </div>
+      <div style="margin-top: 14px; color: #555; font-size: 12px">
+        Configure le serveur :<br />
+        <code
+          >export EGN_CONTRACT_ADDRESS=<span id="caddrCopy">0x...</span></code
+        ><br />
+        <code>sudo systemctl restart alexandria-commerce</code>
+      </div>
+    </div>
+
+    <script>
+      // ── Bytecode compilé depuis EGN.sol (solc 0.8.20, optimized 200) ──
+      const BC =
+        "0x608060405234801561000f575f80fd5b50600180546001600160a01b03191633178155604080518082018252600781526622b732b933b7b760c91b60209182015281518083018352928352603160f81b9281019290925280517f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f928101929092527f8cad4b54ab9cf835ba6ee0e7aa1d43b5bedec72ceb0a7b3b471fca2fb35dd574908201527fc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc660608201524660808201523060a082015260c00160408051601f198184030181529190528051602090910120600455611044806101025f395ff3fe608060405234801561000f575f80fd5b506004361061011c575f3560e01c806342966c68116100a957806395d89b411161006e57806395d89b41146102ae578063a9059cbb146102d0578063d505accf146102e3578063dd62ed3e146102f6578063f2fde38b1461032e575f80fd5b806342966c68146102155780635c975abb1461022857806370a082311461023c5780637ecebe00146102645780638da5cb5b14610283575f80fd5b806323b872dd116100ef57806323b872dd146101a557806330adf81f146101b8578063313ce567146101df5780633644e515146101f957806340c10f1914610202575f80fd5b806306fdde0314610120578063095ea7b31461015c57806316c38b3c1461017f57806318160ddd14610194575b5f80fd5b6101466040518060400160405280600781526020016622b732b933b7b760c91b81525081565b6040516101539190610caf565b60405180910390f35b61016f61016a366004610d15565b610341565b6040519015158152602001610153565b61019261018d366004610d3d565b6103ad565b005b5f545b604051908152602001610153565b61016f6101b3366004610d63565b6103fe565b6101977f6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c981565b6101e7601281565b60405160ff9091168152602001610153565b61019760045481565b610192610210366004610d15565b6104e0565b610192610223366004610d9c565b6106b8565b60015461016f90600160a01b900460ff1681565b61019761024a366004610db3565b6001600160a01b03165f9081526002602052604090205490565b610197610272366004610db3565b60056020525f908152604090205481565b600154610296906001600160a01b031681565b6040516001600160a01b039091168152602001610153565b6101466040518060400160405280600381526020016222a3a760e91b81525081565b61016f6102de366004610d15565b6107e5565b6101926102f1366004610dcc565b610825565b610197610304366004610e39565b6001600160a01b039182165f90815260036020908152604080832093909416825291909152205490565b61019261033c366004610db3565b610a7b565b335f8181526003602090815260408083206001600160a01b038716808552925280832085905551919290917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9259061039b9086815260200190565b60405180910390a35060015b92915050565b6001546001600160a01b031633146103e05760405162461bcd60e51b81526004016103d790610e6a565b60405180910390fd5b60018054911515600160a01b0260ff60a01b19909216919091179055565b6001545f90600160a01b900460ff161561042a5760405162461bcd60e51b81526004016103d790610e92565b6001600160a01b0384165f9081526003602090815260408083203384529091529020548281101561049d5760405162461bcd60e51b815260206004820152601b60248201527f45474e3a20696e73756666696369656e7420616c6c6f77616e6365000000000060448201526064016103d7565b6104a78382610ecb565b6001600160a01b0386165f9081526003602090815260408083203384529091529020556104d5858585610b4a565b506001949350505050565b6001546001600160a01b0316331461050a5760405162461bcd60e51b81526004016103d790610e6a565b600154600160a01b900460ff16156105345760405162461bcd60e51b81526004016103d790610e92565b6001600160a01b03821661058a5760405162461bcd60e51b815260206004820152601960248201527f45474e3a206d696e7420746f207a65726f20616464726573730000000000000060448201526064016103d7565b5f81116105d05760405162461bcd60e51b8152602060048201526014602482015273045474e3a206b7768206d757374206265203e20360641b60448201526064016103d7565b5f6105dd6012600a610fbe565b6105e79083610fcc565b6001600160a01b0384165f90815260026020526040812080549293508392909190610613908490610fe3565b92505081905550805f8082825461062a9190610fe3565b90915550506040518181526001600160a01b038416905f907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a360408051838152602081018390526001600160a01b038516917f4c209b5fc8ad50758f13e2e1088ba56a560dff690a1c6fef26394f4c03821c4f910160405180910390a2505050565b600154600160a01b900460ff16156106e25760405162461bcd60e51b81526004016103d790610e92565b335f9081526002602052604090205481111561073c5760405162461bcd60e51b815260206004820152601960248201527845474e3a20696e73756666696369656e742062616c616e636560381b60448201526064016103d7565b335f908152600260205260408120805483929061075a908490610ecb565b92505081905550805f808282546107719190610ecb565b90915550506040518181525f9033907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9060200160405180910390a360405181815233907fcc16f5dbb4873280815c1ee09dbd06736cffcc184412cf7a71a0fdb75d397ca59060200160405180910390a250565b6001545f90600160a01b900460ff16156108115760405162461bcd60e51b81526004016103d790610e92565b61081c338484610b4a565b50600192915050565b8342111561086b5760405162461bcd60e51b81526020600482015260136024820152721151d38e881c195c9b5a5d08195e1c1a5c9959606a1b60448201526064016103d7565b6004546001600160a01b0388165f90815260056020526040812080549192917f6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9918b918b918b9190876108bd83610ff6565b909155506040805160208101969096526001600160a01b0394851690860152929091166060840152608083015260a082015260c0810187905260e0016040516020818303038152906040528051906020012060405160200161093692919061190160f01b81526002810192909252602282015260420190565b60408051601f1981840301815282825280516020918201205f80855291840180845281905260ff88169284019290925260608301869052608083018590529092509060019060a0016020604051602081039080840390855afa15801561099e573d5f803e3d5ffd5b505050602060405103519050886001600160a01b0316816001600160a01b03161480156109d357506001600160a01b03811615155b610a155760405162461bcd60e51b81526020600482015260136024820152721151d38e881a5b9d985b1a59081c195c9b5a5d606a1b60448201526064016103d7565b6001600160a01b038981165f818152600360209081526040808320948d16808452948252918290208b905590518a81527f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925910160405180910390a3505050505050505050565b6001546001600160a01b03163314610aa55760405162461bcd60e51b81526004016103d790610e6a565b6001600160a01b038116610aef5760405162461bcd60e51b815260206004820152601160248201527045474e3a207a65726f206164647265737360781b60448201526064016103d7565b6001546040516001600160a01b038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a3600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001600160a01b038216610ba05760405162461bcd60e51b815260206004820152601d60248201527f45474e3a207472616e7366657220746f207a65726f206164647265737300000060448201526064016103d7565b6001600160a01b0383165f90815260026020526040902054811115610c035760405162461bcd60e51b815260206004820152601960248201527845474e3a20696e73756666696369656e742062616c616e636560381b60448201526064016103d7565b6001600160a01b0383165f9081526002602052604081208054839290610c2a908490610ecb565b90915550506001600160a01b0382165f9081526002602052604081208054839290610c56908490610fe3565b92505081905550816001600160a01b0316836001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef83604051610ca291815260200190565b60405180910390a3505050565b5f6020808352835180828501525f5b81811015610cda57858101830151858201604001528201610cbe565b505f604082860101526040601f19601f8301168501019250505092915050565b80356001600160a01b0381168114610d10575f80fd5b919050565b5f8060408385031215610d26575f80fd5b610d2f83610cfa565b946020939093013593505050565b5f60208284031215610d4d575f80fd5b81358015158114610d5c575f80fd5b9392505050565b5f805f60608486031215610d75575f80fd5b610d7e84610cfa565b9250610d8c60208501610cfa565b9150604084013590509250925092565b5f60208284031215610dac575f80fd5b5035919050565b5f60208284031215610dc3575f80fd5b610d5c82610cfa565b5f805f805f805f60e0888a031215610de2575f80fd5b610deb88610cfa565b9650610df960208901610cfa565b95506040880135945060608801359350608088013560ff81168114610e1c575f80fd5b9699959850939692959460a0840135945060c09093013592915050565b5f8060408385031215610e4a575f80fd5b610e5383610cfa565b9150610e6160208401610cfa565b90509250929050565b6020808252600e908201526d22a3a71d103737ba1037bbb732b960911b604082015260600190565b6020808252600b908201526a1151d38e881c185d5cd95960aa1b604082015260600190565b634e487b7160e01b5f52601160045260245ffd5b818103818111156103a7576103a7610eb7565b600181815b80851115610f1857815f1904821115610efe57610efe610eb7565b80851615610f0b57918102915b93841c9390800290610ee3565b509250929050565b5f82610f2e575060016103a7565b81610f3a57505f6103a7565b8160018114610f505760028114610f5a57610f76565b60019150506103a7565b60ff841115610f6b57610f6b610eb7565b50506001821b6103a7565b5060208310610133831016604e8410600b8410161715610f99575081810a6103a7565b610fa38383610ede565b805f1904821115610fb657610fb6610eb7565b029392505050565b5f610d5c60ff841683610f20565b80820281158282048414176103a7576103a7610eb7565b808201808211156103a7576103a7610eb7565b5f6001820161100757611007610eb7565b506001019056fea264697066735822122007329c90fa744b6baae6dcf982358e9f47dd6ff7d834aae0ae20ddb24b9102f564736f6c63430008140033";
+
+      let acct = null;
+
+      function msg(html, cls = "inf") {
+        document.getElementById("msg").innerHTML =
+          '<div class="' + cls + '">' + html + "</div>";
+      }
+
+      async function req(method, params = []) {
+        return window.ethereum.request({ method, params });
+      }
+
+      async function connect() {
+        if (!window.ethereum) {
+          msg(
+            "MetaMask non détecté. Ouvre cette page dans Chrome/Firefox avec MetaMask installé.",
+            "err",
+          );
+          return;
+        }
+        try {
+          const accounts = await req("eth_requestAccounts");
+          acct = accounts[0];
+
+          const chainHex = await req("eth_chainId");
+          const chainId = parseInt(chainHex, 16);
+          if (chainId !== 1) {
+            msg(
+              "⚠️ Mauvais réseau (chain " +
+                chainId +
+                "). Passe sur <b>Ethereum Mainnet</b> dans MetaMask.",
+              "err",
+            );
+            document.getElementById("network").textContent =
+              "❌ Chain " + chainId + " — besoin de Mainnet (1)";
+            return;
+          }
+
+          const balHex = await req("eth_getBalance", [acct, "latest"]);
+          const balWei = BigInt(balHex);
+          const balEth = (Number(balWei / BigInt(1e14)) / 1e4).toFixed(4);
+
+          document.getElementById("wallet").textContent = acct;
+          document.getElementById("balance").textContent = balEth + " ETH";
+          document.getElementById("network").textContent =
+            "✅ Ethereum Mainnet (1)";
+
+          // Estimate gas
+          try {
+            const gasHex = await req("eth_estimateGas", [
+              { from: acct, data: BC },
+            ]);
+            const gas = parseInt(gasHex, 16);
+            const gpHex = await req("eth_gasPrice");
+            const gp = BigInt(gpHex);
+            const costWei = gp * BigInt(gas);
+            const costEth = (Number(costWei / BigInt(1e12)) / 1e6).toFixed(5);
+            const gpGwei = (Number(gp) / 1e9).toFixed(1);
+            document.getElementById("gasEst").textContent =
+              gas.toLocaleString() +
+              " gas · " +
+              gpGwei +
+              " Gwei · ~" +
+              costEth +
+              " ETH";
+          } catch (e) {
+            document.getElementById("gasEst").textContent =
+              "Estimation indisponible (" + e.message + ")";
+          }
+
+          document.getElementById("deployBtn").disabled = false;
+          msg("✅ MetaMask connecté. Prêt à déployer.", "ok");
+        } catch (e) {
+          msg("Erreur connexion : " + e.message, "err");
+        }
+      }
+
+      async function deploy() {
+        document.getElementById("deployBtn").disabled = true;
+        msg("⏳ Signe la transaction dans MetaMask…", "inf");
+        try {
+          const gasHex = await req("eth_estimateGas", [
+            { from: acct, data: BC },
+          ]);
+          // Ajoute 20% de buffer
+          const gas = Math.ceil(parseInt(gasHex, 16) * 1.2);
+          const gasWithBuffer = "0x" + gas.toString(16);
+
+          const txHash = await req("eth_sendTransaction", [
+            {
+              from: acct,
+              data: BC,
+              gas: gasWithBuffer,
+            },
+          ]);
+
+          msg(
+            "📡 Tx envoyée : <code>" +
+              txHash +
+              "</code><br>Attente de confirmation (15–60 sec)…",
+            "inf",
+          );
+
+          // Poll receipt
+          let receipt = null;
+          for (let i = 0; i < 120; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            receipt = await req("eth_getTransactionReceipt", [txHash]);
+            if (receipt) break;
+          }
+
+          if (!receipt || receipt.status !== "0x1") {
+            msg("❌ Transaction échouée ou timeout. Tx: " + txHash, "err");
+            document.getElementById("deployBtn").disabled = false;
+            return;
+          }
+
+          const addr = receipt.contractAddress;
+          document.getElementById("caddr").textContent = addr;
+          document.getElementById("caddrCopy").textContent = addr;
+          document.getElementById("txh").textContent = txHash;
+          const link = document.getElementById("escan");
+          link.href = "https://etherscan.io/address/" + addr;
+          link.textContent = "etherscan.io/address/" + addr;
+          document.getElementById("result").style.display = "block";
+          msg("✅ EGN déployé sur Ethereum Mainnet!", "ok");
+        } catch (e) {
+          msg("Erreur : " + e.message, "err");
+          document.getElementById("deployBtn").disabled = false;
+        }
+      }
+
+      // Auto-connect si déjà autorisé
+      window.addEventListener("load", async () => {
+        if (window.ethereum) {
+          try {
+            const accounts = await req("eth_accounts");
+            if (accounts.length) {
+              acct = accounts[0];
+              connect();
+            }
+          } catch (_) {}
+        }
+      });
+    </script>
+  </body>
+</html>

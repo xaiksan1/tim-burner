@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tim-Burner ⚡ The Sovereign Web3 Wallet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<style>
+:root {
+  --fire1: #ff4500;
+  --fire2: #ff8c00;
+  --fire3: #ffd700;
+  --chrome: #c8c8d4;
+  --chrome2: #8a8a9a;
+  --bg: #0a0804;
+  --panel: #111008;
+  --red-line: #ff1a1a;
+  --needle: #ff3300;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--chrome);
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  width: 100%;
+  text-align: center;
+  padding: 18px 0 8px;
+  background: linear-gradient(180deg, #1a0800 0%, transparent 100%);
+}
+.logo-text {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--fire3), var(--fire2), var(--fire1));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: fire-text 2s linear infinite;
+}
+.tagline {
+  font-size: 0.7rem;
+  letter-spacing: 4px;
+  color: var(--chrome2);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+@keyframes fire-text {
+  to { background-position: 200% center; }
+}
+
+/* ── MAIN STAGE ── */
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 960px;
+  padding: 20px 10px;
+  position: relative;
+}
+
+/* ── FLAMES ── */
+.flame-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 120px;
+  flex-shrink: 0;
+}
+.flame-wrap {
+  position: relative;
+  height: 180px;
+  width: 80px;
+  display: flex;
+  justify-content: center;
+}
+.flame {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50% 50% 20% 20%;
+  transform-origin: bottom center;
+  animation: flicker 0.15s ease-in-out infinite alternate;
+}
+.f1 { width: 40px; height: 120px; background: linear-gradient(180deg, var(--fire3) 0%, var(--fire2) 40%, var(--fire1) 100%); left: 20px; animation-delay: 0s; }
+.f2 { width: 28px; height: 90px; background: linear-gradient(180deg, #fff8e0 0%, var(--fire3) 30%, var(--fire2) 70%, var(--fire1) 100%); left: 26px; animation-delay: 0.07s; animation-duration: 0.12s; }
+.f3 { width: 18px; height: 140px; background: linear-gradient(180deg, #ffffff 0%, var(--fire3) 20%, var(--fire2) 60%, var(--fire1) 100%); left: 31px; animation-delay: 0.03s; animation-duration: 0.18s; }
+.flame-side.right .f1 { left: 20px; }
+.flame-side.right .f2 { left: 26px; }
+.flame-side.right .f3 { left: 31px; }
+
+@keyframes flicker {
+  0%   { transform: scaleX(1) scaleY(1) rotate(-2deg); opacity: 0.95; }
+  100% { transform: scaleX(0.88) scaleY(1.08) rotate(3deg); opacity: 1; }
+}
+
+/* ── ENGINE BLOCK ── */
+.engine-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.intake {
+  width: 180px;
+  height: 36px;
+  background: linear-gradient(180deg, #2a2008 0%, var(--chrome2) 30%, #444 70%, #222 100%);
+  border-radius: 6px 6px 0 0;
+  border: 2px solid #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: var(--chrome2);
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+}
+.intake::after {
+  content: '';
+  position: absolute;
+  top: 6px; left: 20px; right: 20px; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--fire3), transparent);
+  border-radius: 2px;
+  animation: pulse-intake 1.2s ease-in-out infinite;
+}
+@keyframes pulse-intake {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.7); }
+  50%       { opacity: 1;   transform: scaleX(1); }
+}
+
+.cylinders-row {
+  display: flex;
+  gap: 6px;
+}
+
+.cylinder {
+  width: 36px;
+  height: 90px;
+  background: linear-gradient(90deg, #1a1a1a 0%, #333 20%, var(--chrome2) 40%, #444 60%, #2a2a2a 100%);
+  border: 1.5px solid #555;
+  border-radius: 4px 4px 2px 2px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+.piston {
+  width: 26px;
+  height: 20px;
+  background: linear-gradient(180deg, var(--chrome) 0%, var(--chrome2) 60%, #666 100%);
+  border-radius: 3px;
+  border: 1px solid #888;
+  position: absolute;
+  animation: piston-move 0.4s ease-in-out infinite alternate;
+  box-shadow: 0 0 8px rgba(255,200,0,0.3);
+}
+.cylinder:nth-child(1) .piston { animation-delay: 0s; }
+.cylinder:nth-child(2) .piston { animation-delay: 0.05s; }
+.cylinder:nth-child(3) .piston { animation-delay: 0.15s; }
+.cylinder:nth-child(4) .piston { animation-delay: 0.1s; }
+.cylinder:nth-child(5) .piston { animation-delay: 0.25s; }
+.cylinder:nth-child(6) .piston { animation-delay: 0.2s; }
+.cylinder:nth-child(7) .piston { animation-delay: 0.35s; }
+.cylinder:nth-child(8) .piston { animation-delay: 0.3s; }
+
+@keyframes piston-move {
+  0%   { bottom: 4px;  box-shadow: 0 0 6px rgba(255,150,0,0.2); }
+  100% { bottom: 52px; box-shadow: 0 0 14px rgba(255,200,0,0.7); }
+}
+
+.exhaust-spark {
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px;
+  background: var(--fire3);
+  border-radius: 50%;
+  animation: spark 0.4s ease-out infinite;
+  opacity: 0;
+}
+@keyframes spark {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(1); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.2); }
+}
+.cylinder:nth-child(1) .exhaust-spark { animation-delay: 0s; }
+.cylinder:nth-child(2) .exhaust-spark { animation-delay: 0.05s; }
+.cylinder:nth-child(3) .exhaust-spark { animation-delay: 0.15s; }
+.cylinder:nth-child(4) .exhaust-spark { animation-delay: 0.1s; }
+
+.engine-base {
+  width: 190px;
+  height: 22px;
+  background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+  border: 1.5px solid #444;
+  border-radius: 2px;
+}
+
+/* ── WING ── */
+.wing {
+  width: 70px;
+  height: 12px;
+  background: linear-gradient(90deg, #222, #444, #222);
+  border-top: 2px solid var(--chrome2);
+  position: relative;
+  margin: 6px 0;
+}
+.wing::before {
+  content: '';
+  position: absolute;
+  top: -6px; left: 10%; right: 10%;
+  height: 5px;
+  background: var(--chrome2);
+  clip-path: polygon(0 100%, 10% 0, 90% 0, 100% 100%);
+}
+
+/* ── RPM GAUGE ── */
+.rpm-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.rpm-gauge {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.rpm-gauge svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 12px rgba(255,100,0,0.4));
+}
+
+.rpm-value {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.rpm-number {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--fire2);
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px var(--fire1);
+  display: block;
+  min-width: 80px;
+}
+.rpm-label {
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  color: var(--chrome2);
+  text-transform: uppercase;
+}
+
+/* ── ACTION PANEL ── */
+.action-panel {
+  width: 100%;
+  max-width: 520px;
+  padding: 0 16px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wallet-bar {
+  background: var(--panel);
+  border: 1px solid #2a2010;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wallet-addr {
+  font-size: 0.7rem;
+  color: var(--chrome2);
+  letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.wallet-balance {
+  font-size: 0.8rem;
+  color: var(--fire3);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.btn {
+  border: none;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-connect {
+  background: linear-gradient(135deg, #1a0a00, #3a1800);
+  border: 2px solid var(--fire2);
+  color: var(--fire2);
+  padding: 14px 24px;
+  font-size: 0.85rem;
+  width: 100%;
+  box-shadow: 0 0 20px rgba(255,140,0,0.2), inset 0 0 20px rgba(255,140,0,0.05);
+}
+.btn-connect:hover {
+  background: linear-gradient(135deg, #2a1000, #5a2800);
+  box-shadow: 0 0 30px rgba(255,140,0,0.4), inset 0 0 20px rgba(255,140,0,0.1);
+}
+
+.btn-launch {
+  background: linear-gradient(135deg, #300 0%, #600 50%, #300 100%);
+  border: 2px solid var(--fire1);
+  color: var(--fire3);
+  padding: 18px 24px;
+  font-size: 1rem;
+  width: 100%;
+  box-shadow: 0 0 25px rgba(255,69,0,0.3), inset 0 0 25px rgba(255,69,0,0.08);
+}
+.btn-launch:hover {
+  box-shadow: 0 0 40px rgba(255,69,0,0.5), inset 0 0 30px rgba(255,69,0,0.15);
+}
+.btn-launch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kwh-selector {
+  display: flex;
+  gap: 8px;
+}
+.kwh-option {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid #2a1a00;
+  border-radius: 4px;
+  padding: 10px 8px;
+  color: var(--chrome2);
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+.kwh-option:hover, .kwh-option.selected {
+  border-color: var(--fire2);
+  color: var(--fire3);
+  background: #1a0d00;
+  box-shadow: 0 0 10px rgba(255,140,0,0.2);
+}
+
+.status-bar {
+  background: var(--panel);
+  border: 1px solid #1a1a00;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-size: 0.68rem;
+  color: var(--chrome2);
+  letter-spacing: 1px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #333;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.ok    { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+.status-dot.fire  { background: var(--fire2); box-shadow: 0 0 6px var(--fire2); animation: blink 0.5s infinite; }
+.status-dot.error { background: var(--red-line); box-shadow: 0 0 6px var(--red-line); }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+.stock-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--chrome2);
+  padding: 0 2px;
+}
+.stock-val { color: var(--fire3); font-weight: 700; }
+
+/* ── FOOTER ── */
+.footer {
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: #333;
+  text-transform: uppercase;
+  padding-bottom: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-text">⚡ Tim-Burner</div>
+  <div class="tagline">Sovereign Web3 Wallet · No Platform · No Permission · Straight Pipe</div>
+</div>
+
+<!-- MAIN ENGINE STAGE -->
+<div class="stage">
+  <!-- LEFT FLAMES -->
+  <div class="flame-side left">
+    <div class="wing"></div>
+    <div class="flame-wrap">
+      <div class="flame f3"></div>
+      <div class="flame f2"></div>
+      <div class="flame f1"></div>
+    </div>
+  </div>
+
+  <!-- V8 ENGINE BLOCK -->
+  <div class="engine-block">
+    <div class="intake">454 BIG BLOCK · HOT-ROD SOVEREIGN</div>
+    <div class="cylinders-row">
+      <div class="cylinder"><div class="exhaust-spark"></div><div class="piston"></div></div>
+      <div class="cylinder"><div class="exhaust-spark"></div><div class="piston"></div></div>
+      <div class="cylinder"><div class="exhaust-spark"></div><div class="piston"></div></div>
+      <div class="cylinder"><div class="exhaust-spark"></div><div class="piston"></div></div>
+      <div class="cylinder"><div class="piston"></div></div>
+      <div class="cylinder"><div class="piston"></div></div>
+      <div class="cylinder"><div class="piston"></div></div>
+      <div class="cylinder"><div class="piston"></div></div>
+    </div>
+    <div class="engine-base"></div>
+  </div>
+
+  <!-- RIGHT FLAMES -->
+  <div class="flame-side right">
+    <div class="wing"></div>
+    <div class="flame-wrap">
+      <div class="flame f3"></div>
+      <div class="flame f2"></div>
+      <div class="flame f1"></div>
+    </div>
+  </div>
+
+  <!-- RPM GAUGE -->
+  <div class="rpm-section">
+    <div class="rpm-gauge">
+      <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+        <!-- Gauge background ring -->
+        <circle cx="110" cy="110" r="98" fill="#0a0804" stroke="#1a1000" stroke-width="3"/>
+
+        <!-- RPM arc track -->
+        <circle id="gauge-track" cx="110" cy="110" r="82"
+          fill="none" stroke="#1a0800" stroke-width="14"
+          stroke-dasharray="430 516" stroke-dashoffset="-43"
+          stroke-linecap="round" transform="rotate(135 110 110)"/>
+
+        <!-- RPM arc fill (animated) -->
+        <circle id="gauge-fill" cx="110" cy="110" r="82"
+          fill="none" stroke="url(#fireGrad)" stroke-width="14"
+          stroke-dasharray="0 516" stroke-dashoffset="-43"
+          stroke-linecap="round" transform="rotate(135 110 110)"
+          style="transition: stroke-dasharray 0.3s ease-out"/>
+
+        <!-- Redline zone -->
+        <circle cx="110" cy="110" r="82"
+          fill="none" stroke="#ff1a1a" stroke-width="14"
+          stroke-dasharray="43 473" stroke-dashoffset="-430"
+          stroke-linecap="round" transform="rotate(135 110 110)" opacity="0.7"/>
+
+        <!-- Tick marks -->
+        <g id="ticks" transform="translate(110,110)">
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#555" stroke-width="2" transform="rotate(-135)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#555" stroke-width="2" transform="rotate(-90)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#555" stroke-width="2" transform="rotate(-45)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#555" stroke-width="2" transform="rotate(0)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#555" stroke-width="2" transform="rotate(45)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#ff1a1a" stroke-width="3" transform="rotate(90)"/>
+          <line x1="0" y1="-96" x2="0" y2="-86" stroke="#ff1a1a" stroke-width="3" transform="rotate(112.5)"/>
+        </g>
+
+        <!-- Labels -->
+        <text x="36" y="174" fill="#555" font-size="11" font-family="Courier New">0</text>
+        <text x="52"  y="52"  fill="#555" font-size="11" font-family="Courier New">2</text>
+        <text x="108" y="28"  fill="#555" font-size="11" font-family="Courier New">4</text>
+        <text x="162" y="52"  fill="#555" font-size="11" font-family="Courier New">6</text>
+        <text x="174" y="120" fill="#ff4400" font-size="11" font-family="Courier New" font-weight="bold">8</text>
+
+        <!-- Needle -->
+        <g id="needle" transform="translate(110,110) rotate(-135)">
+          <line x1="0" y1="20" x2="0" y2="-75"
+            stroke="var(--needle)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="0" cy="0" r="6" fill="#222" stroke="var(--chrome2)" stroke-width="2"/>
+        </g>
+
+        <!-- RPM x100 label -->
+        <text x="110" y="158" fill="#555" font-size="9" font-family="Courier New"
+          text-anchor="middle">RPM × 100</text>
+
+        <defs>
+          <linearGradient id="fireGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#ff4500"/>
+            <stop offset="50%"  stop-color="#ff8c00"/>
+            <stop offset="100%" stop-color="#ffd700"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="rpm-value">
+        <span class="rpm-number" id="rpm-display">0</span>
+        <span class="rpm-label">RPM</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTION PANEL -->
+<div class="action-panel">
+
+  <!-- Wallet bar -->
+  <div class="wallet-bar" id="wallet-bar" style="display:none">
+    <span class="wallet-addr" id="wallet-addr">—</span>
+    <span class="wallet-balance" id="wallet-balance">—</span>
+  </div>
+
+  <!-- Connect -->
+  <button class="btn btn-connect" id="btn-connect" onclick="connectWallet()">
+    ⚡ Connect MetaMask
+  </button>
+
+  <!-- kWh selector -->
+  <div class="kwh-selector" id="kwh-selector" style="display:none">
+    <div class="kwh-option" data-kwh="10000"  onclick="selectKwh(this)">10K kWh<br><small>~$470</small></div>
+    <div class="kwh-option selected" data-kwh="100000" onclick="selectKwh(this)">100K kWh<br><small>~$4,700</small></div>
+    <div class="kwh-option" data-kwh="1000000" onclick="selectKwh(this)">1M kWh<br><small>~$47,000</small></div>
+  </div>
+
+  <!-- Launch button -->
+  <button class="btn btn-launch" id="btn-buy" disabled onclick="buyEnergon()">
+    🔥 LAUNCH — BUY ENERGON
+  </button>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-msg">Connect wallet to ignite the engine</span>
+  </div>
+
+  <!-- Stock -->
+  <div class="stock-bar">
+    <span>SEALED STOCK</span>
+    <span class="stock-val" id="stock-display">— kWh available</span>
+    <span>$0.047 USD/kWh</span>
+  </div>
+</div>
+
+<div class="footer">Tim-Burner · Hommage Sir Tim Berners-Lee · HTTP 402/1991 · Alexandria Sovereign · Open Source</div>
+
+<script>
+const COMMERCE_URL = window.location.origin; // auto-detect backend
+const WALLET_ADDR  = '0x4B9F37c926cC1cF0b4B7037b97a55332414CABDD';
+const PRICE_PER_KWH_USD = 0.047;
+const USDC_MAINNET = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+
+let provider, signer, account;
+let selectedKwh = 100000;
+let rpmTarget = 800;
+let rpmCurrent = 0;
+let animFrame;
+
+// ── RPM ENGINE ──
+function setRpm(target) {
+  rpmTarget = target;
+  if (!animFrame) animRpm();
+}
+
+function animRpm() {
+  const diff = rpmTarget - rpmCurrent;
+  rpmCurrent += diff * 0.08;
+  if (Math.abs(diff) < 10) rpmCurrent = rpmTarget;
+  updateGauge(rpmCurrent);
+  if (Math.abs(rpmCurrent - rpmTarget) > 5) {
+    animFrame = requestAnimationFrame(animRpm);
+  } else {
+    animFrame = null;
+  }
+}
+
+function updateGauge(rpm) {
+  const max   = 8000;
+  const arcLen = 430;
+  const fill   = Math.min(rpm / max, 1) * arcLen;
+  const angle  = -135 + (rpm / max) * 270;
+
+  document.getElementById('gauge-fill').setAttribute('stroke-dasharray', `${fill} 516`);
+  document.getElementById('needle').setAttribute('transform', `translate(110,110) rotate(${angle})`);
+  document.getElementById('rpm-display').textContent = Math.round(rpm).toLocaleString();
+}
+
+// Idle engine flutter
+function idleFlutter() {
+  const base = account ? 900 : 400;
+  rpmTarget = base + (Math.random() - 0.5) * 80;
+  updateGauge(rpmCurrent + (rpmTarget - rpmCurrent) * 0.15);
+  setTimeout(idleFlutter, 120);
+}
+idleFlutter();
+
+// ── WALLET ──
+async function connectWallet() {
+  if (!window.ethereum) {
+    setStatus('error', 'MetaMask not found — install it at metamask.io');
+    return;
+  }
+  try {
+    setStatus('fire', 'Connecting...');
+    setRpm(3500);
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer  = await provider.getSigner();
+    account = accounts[0];
+
+    const balance = await provider.getBalance(account);
+    const eth = parseFloat(ethers.formatEther(balance)).toFixed(4);
+
+    document.getElementById('wallet-bar').style.display = 'flex';
+    document.getElementById('wallet-addr').textContent  = account.slice(0,6) + '...' + account.slice(-4);
+    document.getElementById('wallet-balance').textContent = `${eth} ETH`;
+    document.getElementById('btn-connect').textContent = '✓ Connected';
+    document.getElementById('btn-connect').style.borderColor = '#00ff88';
+    document.getElementById('kwh-selector').style.display = 'flex';
+    document.getElementById('btn-buy').disabled = false;
+
+    setStatus('ok', `Wallet ignited — ${account.slice(0,10)}...`);
+    setRpm(1200);
+    loadStock();
+  } catch(e) {
+    setStatus('error', 'Connection refused: ' + e.message);
+    setRpm(400);
+  }
+}
+
+function selectKwh(el) {
+  document.querySelectorAll('.kwh-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedKwh = parseInt(el.dataset.kwh);
+}
+
+// ── BUY ENERGON ──
+async function buyEnergon() {
+  if (!signer) return;
+  const btn = document.getElementById('btn-buy');
+  btn.disabled = true;
+  setRpm(7500);
+  setStatus('fire', `Building x402 invoice for ${selectedKwh.toLocaleString()} kWh...`);
+
+  try {
+    // Get invoice from commerce server
+    const resp = await fetch(`${COMMERCE_URL}/api/energon/sell`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-type': 'human' },
+      body: JSON.stringify({ kwh: selectedKwh, buyer: account })
+    });
+    const data = await resp.json();
+
+    if (data.rail === 'D' && data.invoice) {
+      // x402 payment — send USDC
+      const invoice = data.invoice;
+      setStatus('fire', `Invoice ready — sign USDC transfer of $${(selectedKwh * PRICE_PER_KWH_USD).toFixed(2)}...`);
+
+      const usdcAbi = ['function transfer(address to, uint256 amount) returns (bool)'];
+      const usdc = new ethers.Contract(USDC_MAINNET, usdcAbi, signer);
+      const amountUsdc = BigInt(Math.round(selectedKwh * PRICE_PER_KWH_USD * 1e6));
+      const tx = await usdc.transfer(invoice.recipient || WALLET_ADDR, amountUsdc);
+
+      setStatus('fire', `TX sent — ${tx.hash.slice(0,12)}... waiting confirmation...`);
+      setRpm(8200);
+      await tx.wait(1);
+      setRpm(5000);
+      setStatus('ok', `✓ ${selectedKwh.toLocaleString()} kWh purchased! TX: ${tx.hash.slice(0,16)}...`);
+    } else if (data.kwh_sold) {
+      setRpm(5000);
+      setStatus('ok', `✓ ${data.kwh_sold.toLocaleString()} kWh acquired — ${data.rail || 'done'}`);
+    } else {
+      setRpm(1200);
+      setStatus('error', data.error || JSON.stringify(data).slice(0,80));
+    }
+  } catch(e) {
+    setRpm(1200);
+    setStatus('error', e.message.slice(0,100));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadStock() {
+  try {
+    const r = await fetch(`${COMMERCE_URL}/api/energon/stock`);
+    const d = await r.json();
+    const kwh = d.sealed_kwh || d.available_kwh || 0;
+    document.getElementById('stock-display').textContent =
+      Number(kwh).toLocaleString(undefined, {maximumFractionDigits: 0}) + ' kWh available';
+  } catch(e) { /* offline ok */ }
+}
+
+function setStatus(type, msg) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + type;
+  document.getElementById('status-msg').textContent = msg;
+}
+
+loadStock();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>EGN → Uniswap V2 — Alexandria</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: monospace;
+        background: #0a0a0a;
+        color: #00ff88;
+        max-width: 680px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #fff;
+        border-bottom: 1px solid #222;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .card {
+        background: #111;
+        border: 1px solid #222;
+        border-radius: 8px;
+        padding: 18px;
+        margin: 14px 0;
+      }
+      .lbl {
+        color: #555;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+      }
+      .val {
+        color: #00ff88;
+        font-size: 13px;
+        margin-bottom: 12px;
+        word-break: break-all;
+      }
+      .val.dim {
+        color: #888;
+      }
+      input[type="number"] {
+        background: #0a0a0a;
+        border: 1px solid #333;
+        border-radius: 4px;
+        color: #fff;
+        font-family: monospace;
+        font-size: 16px;
+        padding: 10px;
+        width: 100%;
+        margin: 6px 0 14px;
+      }
+      input:focus {
+        outline: none;
+        border-color: #00ff88;
+      }
+      button {
+        display: block;
+        width: 100%;
+        padding: 13px;
+        margin: 8px 0;
+        font-size: 14px;
+        font-family: monospace;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .btn-mm {
+        background: #f6851b;
+        color: #fff;
+      }
+      .btn-go {
+        background: #00ff88;
+        color: #000;
+      }
+      .btn-go:disabled,
+      .btn-mm:disabled {
+        background: #1a1a1a;
+        color: #333;
+        cursor: not-allowed;
+      }
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0;
+      }
+      .dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+      .dot.done {
+        border-color: #00ff88;
+        background: #001a0d;
+        color: #00ff88;
+      }
+      .dot.active {
+        border-color: #ffaa00;
+        background: #1a1000;
+        color: #ffaa00;
+      }
+      .status {
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        font-size: 13px;
+      }
+      .ok {
+        background: #001a0d;
+        border: 1px solid #00ff88;
+        color: #00ff88;
+      }
+      .err {
+        background: #1a000d;
+        border: 1px solid #ff0055;
+        color: #ff0055;
+      }
+      .inf {
+        background: #001020;
+        border: 1px solid #0088ff;
+        color: #66aaff;
+      }
+      .warn {
+        background: #1a1000;
+        border: 1px solid #ffaa00;
+        color: #ffaa00;
+      }
+      a {
+        color: #0088ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>⚡ EGN → Uniswap V2 Liquidity</h1>
+    <p style="color: #555; margin-bottom: 16px">
+      Crée le pool ETH/EGN · Prix initial : $0.047 / EGN (= 1 kWh)
+    </p>
+
+    <div class="card">
+      <div class="lbl">Wallet</div>
+      <div class="val" id="wallet">—</div>
+      <div class="lbl">ETH disponible</div>
+      <div class="val" id="ethBal">—</div>
+      <div class="lbl">EGN en wallet</div>
+      <div class="val" id="egnBal">—</div>
+      <div class="lbl">Prix ETH (live)</div>
+      <div class="val" id="ethPrice">—</div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">ETH à injecter dans le pool</div>
+      <input
+        type="number"
+        id="ethInput"
+        value="0.1"
+        min="0.001"
+        step="0.01"
+        oninput="calcEgn()"
+      />
+      <div class="lbl">EGN nécessaires (au prix $0.047)</div>
+      <div class="val" id="egnNeeded">—</div>
+      <div class="val dim" id="priceNote">—</div>
+    </div>
+
+    <div class="card">
+      <div class="step">
+        <div class="dot" id="d0">1</div>
+        <span>Connecter MetaMask</span>
+      </div>
+      <div class="step">
+        <div class="dot" id="d1">2</div>
+        <span>Mint EGN vers ton wallet (owner only)</span>
+      </div>
+      <div class="step">
+        <div class="dot" id="d2">3</div>
+        <span>Approuver Uniswap V2 Router</span>
+      </div>
+      <div class="step">
+        <div class="dot" id="d3">4</div>
+        <span>Ajouter la liquidité (ETH + EGN)</span>
+      </div>
+    </div>
+
+    <button class="btn-mm" id="btnConnect" onclick="connect()">
+      🦊 Connecter MetaMask
+    </button>
+    <button class="btn-go" id="btnMint" onclick="doMint()" disabled>
+      ⚡ Étape 2 — Mint EGN
+    </button>
+    <button class="btn-go" id="btnApprove" onclick="doApprove()" disabled>
+      ✅ Étape 3 — Approuver Router
+    </button>
+    <button class="btn-go" id="btnLiq" onclick="doLiquidity()" disabled>
+      🦄 Étape 4 — Ajouter Liquidité
+    </button>
+
+    <div id="statusDiv"></div>
+
+    <div class="card" id="result" style="display: none">
+      <div class="lbl">🦄 Pool Uniswap V2 ETH/EGN</div>
+      <div class="val" id="pairAddr">—</div>
+      <div class="lbl">Etherscan</div>
+      <div class="val"><a id="pairLink" href="#" target="_blank">—</a></div>
+      <div class="lbl">Uniswap Pool</div>
+      <div class="val">
+        <a id="uniLink" href="#" target="_blank">app.uniswap.org</a>
+      </div>
+    </div>
+
+    <script>
+      // ── Adresses Ethereum Mainnet ─────────────────────────────────────────────────
+      const EGN = "0xDB1F3D86b013A427923A5506fB495FFc2a5b0643";
+      const ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+      const FACTORY = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+      const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+      const PRICE_USD = 0.047;
+      const MAX_UINT = "f".repeat(64);
+      const WAD = BigInt(10) ** BigInt(18);
+
+      // ── Sélecteurs de fonctions (keccak256 pré-calculés) ─────────────────────────
+      const SEL = {
+        mint: "0x40c10f19",
+        approve: "0x095ea7b3",
+        allowance: "0xdd62ed3e",
+        balanceOf: "0x70a08231",
+        addLiquidityETH: "0xf305d719",
+        getPair: "0xe6a43905",
+      };
+
+      let acct = null,
+        ethPriceUSD = 3000;
+
+      // ── Helpers ABI sans dépendance externe ──────────────────────────────────────
+      function padAddr(addr) {
+        return addr.slice(2).toLowerCase().padStart(64, "0");
+      }
+      function padUint(val) {
+        return BigInt(val).toString(16).padStart(64, "0");
+      }
+
+      async function req(method, params = []) {
+        return window.ethereum.request({ method, params });
+      }
+
+      async function ethCall(to, data) {
+        return req("eth_call", [{ to, data }, "latest"]);
+      }
+
+      async function sendTx(to, data, value = "0x0") {
+        const gasHex = await req("eth_estimateGas", [
+          { from: acct, to, data, value },
+        ]);
+        const gasBuf =
+          "0x" + Math.ceil(parseInt(gasHex, 16) * 1.2).toString(16);
+        return req("eth_sendTransaction", [
+          { from: acct, to, data, value, gas: gasBuf },
+        ]);
+      }
+
+      async function waitReceipt(txHash) {
+        setStatus(
+          "En attente de confirmation : " + txHash.slice(0, 20) + "…",
+          "inf",
+        );
+        for (let i = 0; i < 120; i++) {
+          await new Promise((r) => setTimeout(r, 2500));
+          const r = await req("eth_getTransactionReceipt", [txHash]);
+          if (r) return r;
+        }
+        throw new Error("Timeout — vérifie Etherscan");
+      }
+
+      // receipt.status peut être "0x1" (string) ou 1 (int) selon le provider
+      function isSuccess(receipt) {
+        return receipt.status === "0x1" || receipt.status === 1;
+      }
+
+      // ── Affichage status (sécurisé, pas d'innerHTML avec contenu externe) ────────
+      function setStatus(text, cls = "inf") {
+        const container = document.getElementById("statusDiv");
+        container.textContent = "";
+        const el = document.createElement("div");
+        el.className = "status " + cls;
+        el.textContent = text;
+        container.appendChild(el);
+      }
+
+      function setDot(id, state) {
+        const el = document.getElementById("d" + id);
+        el.className = "dot " + state;
+        el.textContent = state === "done" ? "✓" : (id + 1).toString();
+      }
+
+      function setText(id, text) {
+        document.getElementById(id).textContent = text;
+      }
+
+      // ── Prix ETH ─────────────────────────────────────────────────────────────────
+      async function fetchEthPrice() {
+        try {
+          const r = await fetch(
+            "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+          );
+          const j = await r.json();
+          ethPriceUSD = j.ethereum.usd;
+          setText("ethPrice", "$" + ethPriceUSD.toLocaleString());
+        } catch (_) {
+          setText("ethPrice", "$3,000 (estimé)");
+        }
+        calcEgn();
+      }
+
+      function calcEgn() {
+        const eth = parseFloat(document.getElementById("ethInput").value) || 0;
+        const egnNeeded = Math.ceil((eth * ethPriceUSD) / PRICE_USD);
+        setText("egnNeeded", egnNeeded.toLocaleString() + " EGN");
+        setText(
+          "priceNote",
+          "1 EGN = $" +
+            PRICE_USD +
+            " → " +
+            egnNeeded.toLocaleString() +
+            " EGN pour " +
+            eth +
+            " ETH",
+        );
+        return egnNeeded;
+      }
+
+      // ── Balances ──────────────────────────────────────────────────────────────────
+      async function refreshBalances() {
+        const ethHex = await req("eth_getBalance", [acct, "latest"]);
+        setText("ethBal", (Number(BigInt(ethHex)) / 1e18).toFixed(4) + " ETH");
+
+        const egnRaw = await ethCall(EGN, SEL.balanceOf + padAddr(acct));
+        const egnBal = Number(BigInt(egnRaw) / WAD).toLocaleString();
+        setText("egnBal", egnBal + " EGN");
+        return BigInt(egnRaw);
+      }
+
+      // ── Étape 1 : Connect ────────────────────────────────────────────────────────
+      async function connect() {
+        if (!window.ethereum) {
+          setStatus("MetaMask non détecté.", "err");
+          return;
+        }
+        try {
+          const accounts = await req("eth_requestAccounts");
+          acct = accounts[0];
+          const chainId = parseInt(await req("eth_chainId"), 16);
+          if (chainId !== 1) {
+            setStatus("Passe sur Ethereum Mainnet dans MetaMask.", "err");
+            return;
+          }
+          setText("wallet", acct);
+          const egnRaw = await refreshBalances();
+          await fetchEthPrice();
+          setDot(0, "done");
+
+          if (egnRaw > 0n) {
+            // Déjà minté — vérifie l'allowance
+            setDot(1, "done");
+            const alw = await ethCall(
+              EGN,
+              SEL.allowance + padAddr(acct) + padAddr(ROUTER),
+            );
+            if (BigInt(alw) > 0n) {
+              // Déjà approuvé — passe directement à l'étape 4
+              setDot(2, "done");
+              setDot(3, "active");
+              document.getElementById("btnLiq").disabled = false;
+              setStatus(
+                "EGN mintés + Router approuvé. Prêt pour l'étape 4 : Ajouter Liquidité.",
+                "ok",
+              );
+            } else {
+              setDot(2, "active");
+              document.getElementById("btnApprove").disabled = false;
+              setStatus(
+                "EGN mintés. Étape suivante : Approuver le Router.",
+                "ok",
+              );
+            }
+          } else {
+            setDot(1, "active");
+            document.getElementById("btnMint").disabled = false;
+            setStatus("MetaMask connecté. Étape suivante : Mint EGN.", "ok");
+          }
+        } catch (e) {
+          setStatus("Erreur : " + e.message, "err");
+        }
+      }
+
+      // ── Étape 2 : Mint EGN ───────────────────────────────────────────────────────
+      async function doMint() {
+        const egnCount = calcEgn();
+        if (egnCount <= 0) {
+          setStatus("Entre un montant ETH > 0.", "warn");
+          return;
+        }
+        document.getElementById("btnMint").disabled = true;
+        try {
+          setStatus("Signe le Mint dans MetaMask…", "inf");
+          const data = SEL.mint + padAddr(acct) + padUint(egnCount);
+          const txHash = await sendTx(EGN, data);
+          const receipt = await waitReceipt(txHash);
+          if (!isSuccess(receipt)) throw new Error("Mint échoué");
+          await refreshBalances();
+          setDot(1, "done");
+          setDot(2, "active");
+          document.getElementById("btnApprove").disabled = false;
+          setStatus(
+            egnCount.toLocaleString() +
+              " EGN mintés. Étape suivante : Approve.",
+            "ok",
+          );
+        } catch (e) {
+          setStatus("Erreur Mint : " + e.message, "err");
+          document.getElementById("btnMint").disabled = false;
+        }
+      }
+
+      // ── Étape 3 : Approve Router ─────────────────────────────────────────────────
+      async function doApprove() {
+        document.getElementById("btnApprove").disabled = true;
+        try {
+          const alw = await ethCall(
+            EGN,
+            SEL.allowance + padAddr(acct) + padAddr(ROUTER),
+          );
+          const egnNeeded = BigInt(calcEgn()) * WAD;
+          if (BigInt(alw) >= egnNeeded) {
+            setDot(2, "done");
+            setDot(3, "active");
+            document.getElementById("btnLiq").disabled = false;
+            setStatus("Allowance suffisante — approve déjà fait.", "ok");
+            return;
+          }
+          setStatus("Signe l'Approve dans MetaMask…", "inf");
+          const data = SEL.approve + padAddr(ROUTER) + MAX_UINT;
+          const txHash = await sendTx(EGN, data);
+          const receipt = await waitReceipt(txHash);
+          if (!isSuccess(receipt)) throw new Error("Approve échoué");
+          setDot(2, "done");
+          setDot(3, "active");
+          document.getElementById("btnLiq").disabled = false;
+          setStatus("Router approuvé. Étape finale : Ajouter Liquidité.", "ok");
+        } catch (e) {
+          setStatus("Erreur Approve : " + e.message, "err");
+          document.getElementById("btnApprove").disabled = false;
+        }
+      }
+
+      // ── Étape 4 : addLiquidityETH ────────────────────────────────────────────────
+      async function doLiquidity() {
+        const eth = parseFloat(document.getElementById("ethInput").value);
+        const egnCount = calcEgn();
+        document.getElementById("btnLiq").disabled = true;
+        try {
+          const egnWei = BigInt(egnCount) * WAD;
+          const ethWei = BigInt(Math.round(eth * 1e18));
+          const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+
+          // addLiquidityETH(token, amountTokenDesired, amountTokenMin, amountETHMin, to, deadline)
+          const data =
+            SEL.addLiquidityETH +
+            padAddr(EGN) +
+            padUint(egnWei) +
+            padUint(0n) + // amountTokenMin = 0 (nouveau pool)
+            padUint(0n) + // amountETHMin   = 0 (nouveau pool)
+            padAddr(acct) +
+            padUint(deadline);
+
+          const valueHex = "0x" + ethWei.toString(16);
+          setStatus(
+            "Signe addLiquidityETH dans MetaMask (tu envoies " + eth + " ETH)…",
+            "inf",
+          );
+          const txHash = await sendTx(ROUTER, data, valueHex);
+          const receipt = await waitReceipt(txHash);
+          if (!isSuccess(receipt)) throw new Error("addLiquidityETH échoué");
+
+          // Récupère l'adresse du pair depuis la Factory
+          const pairRaw = await ethCall(
+            FACTORY,
+            SEL.getPair + padAddr(EGN) + padAddr(WETH),
+          );
+          const pairAddr = "0x" + pairRaw.slice(-40);
+
+          setText("pairAddr", pairAddr);
+          const pairLink = document.getElementById("pairLink");
+          pairLink.href = "https://etherscan.io/address/" + pairAddr;
+          pairLink.textContent = "etherscan.io/address/" + pairAddr;
+          document.getElementById("uniLink").href =
+            "https://app.uniswap.org/explore/pools/ethereum/" + pairAddr;
+          document.getElementById("result").style.display = "block";
+          setDot(3, "done");
+          await refreshBalances();
+          setStatus("Pool Uniswap V2 ETH/EGN créé !", "ok");
+        } catch (e) {
+          setStatus("Erreur Liquidité : " + e.message, "err");
+          document.getElementById("btnLiq").disabled = false;
+        }
+      }
+
+      window.addEventListener("load", async () => {
+        calcEgn();
+        if (window.ethereum) {
+          try {
+            const a = await req("eth_accounts");
+            if (a.length) connect();
+          } catch (_) {}
+        }
+      });
+    </script>
+  </body>
+</html>

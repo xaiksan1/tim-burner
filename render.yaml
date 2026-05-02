@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tim-burner
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --access-logfile - dwallstreet.commerce_server:app
+    envVars:
+      - key: LEDGER_PATH
+        value: /opt/render/project/src/energon_ledger.json
+      - key: ALEXANDRIA_WALLET
+        value: 0x4B9F37c926cC1cF0b4B7037b97a55332414CABDD
+      - key: ETH_RPC
+        value: https://eth.llamarpc.com
+      - key: EGN_CHAIN_ID
+        value: "1"
+      - key: PORT
+        value: "10000"
