@@ -17,11 +17,16 @@ _ADAM_ROOT = Path(__file__).resolve().parents[1]
 if str(_ADAM_ROOT) not in sys.path:
     sys.path.insert(0, str(_ADAM_ROOT))
 
-from flask import send_file
+from flask import send_file, jsonify
 
 from dwallstreet.energon_api import create_app
 
 app = create_app()
+
+
+@app.route("/api/health")
+def health():
+    return jsonify({"ok": True, "service": "tim-burner"}), 200
 
 
 @app.route("/")
