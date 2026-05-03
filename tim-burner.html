@@ -424,6 +424,58 @@ body {
   text-transform: uppercase;
   padding-bottom: 20px;
 }
+
+/* ── GAS PEDAL ── */
+.gas-zone {
+  width: 100%;
+  max-width: 520px;
+  padding: 0 16px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.gas-pedal {
+  width: 100%;
+  height: 64px;
+  background: linear-gradient(180deg, #1a0500 0%, #3a0a00 50%, #1a0500 100%);
+  border: 2px solid var(--fire1);
+  border-radius: 8px;
+  color: var(--fire2);
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.05s;
+  box-shadow: 0 0 20px rgba(255,69,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.gas-pedal:active, .gas-pedal.pressed {
+  background: linear-gradient(180deg, #3a0a00 0%, #7a1500 50%, #3a0a00 100%);
+  box-shadow: 0 0 50px rgba(255,69,0,0.6), inset 0 0 30px rgba(255,100,0,0.2);
+  transform: scale(0.98);
+  border-color: var(--fire3);
+  color: var(--fire3);
+}
+.smoke {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,200,180,0.6) 0%, transparent 70%);
+  animation: smoke-rise 2s ease-out forwards;
+  z-index: 999;
+}
+@keyframes smoke-rise {
+  0%   { transform: scale(0.3) translateY(0);   opacity: 0.7; }
+  50%  { transform: scale(1.5) translateY(-60px); opacity: 0.4; }
+  100% { transform: scale(3)   translateY(-140px); opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -542,6 +594,15 @@ body {
   </div>
 </div>
 
+<!-- GAS PEDAL -->
+<div class="gas-zone">
+  <div class="gas-pedal" id="gas-pedal"
+    onmousedown="gasDown()" onmouseup="gasUp()" onmouseleave="gasUp()"
+    ontouchstart="gasDown(event)" ontouchend="gasUp()">
+    🔥 GAS — HOLD TO REV
+  </div>
+</div>
+
 <!-- ACTION PANEL -->
 <div class="action-panel">
 
@@ -585,6 +646,113 @@ body {
 <div class="footer">Tim-Burner · Hommage Sir Tim Berners-Lee · HTTP 402/1991 · Alexandria Sovereign · Open Source</div>
 
 <script>
+// ── ENGINE AUDIO (Web Audio API — zero files, pure synthesis) ──
+class EngineAudio {
+  constructor() { this.ctx = null; this.running = false; }
+
+  start() {
+    if (this.running) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Sawtooth = rich harmonics like a real engine
+    this.osc = this.ctx.createOscillator();
+    this.osc.type = 'sawtooth';
+    this.osc.frequency.value = 28;
+
+    // Lowpass to tame the harsh highs
+    this.filter = this.ctx.createBiquadFilter();
+    this.filter.type = 'lowpass';
+    this.filter.frequency.value = 280;
+    this.filter.Q.value = 3;
+
+    // Second osc for body/chest thump
+    this.osc2 = this.ctx.createOscillator();
+    this.osc2.type = 'sine';
+    this.osc2.frequency.value = 55;
+
+    // LFO — the toc toc toc pulse at idle
+    this.lfo = this.ctx.createOscillator();
+    this.lfo.type = 'sine';
+    this.lfo.frequency.value = 11;
+    this.lfoGain = this.ctx.createGain();
+    this.lfoGain.gain.value = 0.4;
+
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.18;
+
+    this.osc.connect(this.filter);
+    this.filter.connect(this.master);
+    this.osc2.connect(this.master);
+    this.lfo.connect(this.lfoGain);
+    this.lfoGain.connect(this.master.gain);
+    this.master.connect(this.ctx.destination);
+
+    this.osc.start(); this.osc2.start(); this.lfo.start();
+    this.running = true;
+  }
+
+  setRpm(rpm) {
+    if (!this.running) return;
+    const t = this.ctx.currentTime;
+    const freq  = 18 + (rpm / 8000) * 220;  // 18Hz idle → 238Hz redline
+    const freq2 = 40 + (rpm / 8000) * 160;
+    const pulse = 8  + (rpm / 8000) * 80;    // toc rate follows RPM
+    const vol   = 0.12 + (rpm / 8000) * 0.25;
+    const cutoff = 200 + (rpm / 8000) * 2800;
+
+    this.osc.frequency.setTargetAtTime(freq,   t, 0.08);
+    this.osc2.frequency.setTargetAtTime(freq2,  t, 0.08);
+    this.lfo.frequency.setTargetAtTime(pulse,   t, 0.08);
+    this.master.gain.setTargetAtTime(vol,       t, 0.08);
+    this.filter.frequency.setTargetAtTime(cutoff, t, 0.08);
+  }
+}
+
+const engine = new EngineAudio();
+let gasHeld = false;
+
+function gasDown(e) {
+  if (e) e.preventDefault();
+  engine.start();
+  gasHeld = true;
+  document.getElementById('gas-pedal').classList.add('pressed');
+  revEngine();
+  spawnSmoke();
+}
+
+function gasUp() {
+  gasHeld = false;
+  document.getElementById('gas-pedal').classList.remove('pressed');
+}
+
+function revEngine() {
+  if (!gasHeld) { setRpm(900); return; }
+  const target = 7200 + Math.random() * 800;
+  setRpm(target);
+  engine.setRpm(target);
+  setTimeout(revEngine, 80);
+}
+
+function spawnSmoke() {
+  if (!gasHeld) return;
+  const pedal = document.getElementById('gas-pedal');
+  const r = pedal.getBoundingClientRect();
+  for (let i = 0; i < 3; i++) {
+    const s = document.createElement('div');
+    s.className = 'smoke';
+    const size = 40 + Math.random() * 60;
+    s.style.cssText = `width:${size}px;height:${size}px;left:${r.left + Math.random()*r.width}px;top:${r.top}px;animation-delay:${i*0.15}s`;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 2000);
+  }
+  setTimeout(spawnSmoke, 200);
+}
+
+// Hook engine audio into RPM gauge
+const _origSetRpm = setRpm;
+// Override setRpm to sync audio when not revving manually
+const setRpmWithAudio = (r) => { _origSetRpm(r); if (!gasHeld && engine.running) engine.setRpm(r); };
+
 const COMMERCE_URL = window.location.origin; // auto-detect backend
 const WALLET_ADDR  = '0x4B9F37c926cC1cF0b4B7037b97a55332414CABDD';
 const PRICE_PER_KWH_USD = 0.047;
